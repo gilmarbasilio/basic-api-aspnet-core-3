@@ -1,5 +1,6 @@
 
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using BasicApiAspnetCore3.Data;
 using BasicApiAspnetCore3.Models;
@@ -8,6 +9,8 @@ using Microsoft.EntityFrameworkCore;
 
 namespace BasicApiAspnetCore3.Controllers
 {
+  [ApiController]
+  [Route("v1/products")]
   public class ProductController : ControllerBase
   {
     [HttpGet]
@@ -18,13 +21,39 @@ namespace BasicApiAspnetCore3.Controllers
       return products;
     }
 
+    [HttpGet]
+    [Route("{id:int}")]
+    public async Task<ActionResult<Product>> GetById([FromServices] DataContext context, int id)
+    {
+      var product = await context.Products.Include(x => x.Category)
+        .AsNoTracking()
+        .FirstOrDefaultAsync(x => x.Id == id);
+
+      return product;
+    }
+
+    [HttpGet]
+    [Route("categories/{id:int}")]
+    public async Task<ActionResult<List<Product>>> GetByCategory([FromServices] DataContext context, int id)
+    {
+      var products = await context.Products
+        .Include(x => x.Category)
+        .AsNoTracking()
+        .Where(x => x.CategoryId == id)
+        .ToListAsync();
+
+      return products;
+    }
+
     [HttpPost]
     [Route("")]
-    public async Task<ActionResult<Category>> Post([FromServices] DataContext context, [FromBody]Category model)
+    public async Task<ActionResult<Product>> Post(
+      [FromServices] DataContext context,
+      [FromBody]Product model)
     {
       if (ModelState.IsValid)
       {
-        context.Categories.Add(model);
+        context.Products.Add(model);
         await context.SaveChangesAsync();
         return model;
       }
@@ -33,5 +62,6 @@ namespace BasicApiAspnetCore3.Controllers
         return BadRequest(ModelState);
       }
     }
+
   }
 }
